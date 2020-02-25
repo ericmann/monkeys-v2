@@ -1,0 +1,21 @@
+{
+    "name": "ericmann/machine-learning-tutorial",
+    "description": "Code to back an intro to machine learning in PHP.",
+    "type": "project",
+    "require": {
+        "symfony/console": "^5.1"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Eric Mann",
+            "email": "eric@eamann.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "autoload": {
+        "classmap": [
+            "src"
+        ]
+    }
+}
