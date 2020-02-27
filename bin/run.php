@@ -9,4 +9,5 @@ use Symfony\Component\Console\Application;
 
 $application = new Application();
 $application->add(new MonkeyCommand());
+$application->add(new GeneticSalesmanCommand());
 $application->run();
