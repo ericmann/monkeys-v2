@@ -19,13 +19,15 @@ class MonkeyCommand extends Command
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
 		// Create an initial population
-		$kernel = new Monkeys\Population(30);
+        $population = new Monkeys\Population();
+        $population->initialize(30);
+        $kernel = new Kernel($population);
 
 		$startTime = time();
 		$i = 0;
-		while ($kernel->bestGenome()->determineFitness() > 0) {
+		while ($population->fitness($kernel->bestGenome()) > 0) {
 			$i++;
-			$kernel->step();
+			$kernel = $kernel->next();
 			$best = $kernel->bestGenome();
 
 			if ($i % 10 === 0) {
@@ -35,8 +37,8 @@ class MonkeyCommand extends Command
 				$out = '';
 				$out .= "\nGeneration:   " . $i;
 				$out .="\nGen / sec:    " . $genPerSec;
-				$out .="\nBest Fitness: " . $best->determineFitness();
-				$out .= "\n\n" . $best->asString();
+				$out .="\nBest Fitness: " . $population->fitness($best);
+				$out .= "\n\n" . $best;
 
 				$lines = substr_count($out, "\n");
 				$output->write(str_repeat("\x1B[1A\x1B[2K", $lines));
@@ -48,7 +50,7 @@ class MonkeyCommand extends Command
 		$totalTime = (time() - $startTime);
 		$output->write("\n\nMonkeys are done!");
 		$output->write(sprintf("\nWe ran %d generations!", $i));
-		$output->write(sprintf("\nEverything completed in %s seconds.", $totalTime));
+		$output->write(sprintf("\nEverything completed in %s seconds.\n", $totalTime));
 
 		// Done
 		return 0;

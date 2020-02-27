@@ -3,46 +3,62 @@ namespace EAMann\Machines;
 
 abstract class Population
 {
-	protected $population;
+	private $population = [];
 
-	protected $maxFitness = 0;
-	protected $sumOfMaxMinusFitness = 0;
+	protected $mutationProbability;
+	protected $crossoverProbability;
 
-	private const MUTATION_PROBABILITY = 0.01;
+	abstract function crossover(Genome $first, Genome $second): Genome;
 
-	private const CROSSOVER_PROBABILITY = 0.87;
+	abstract function mutate(Genome $genome): Genome;
 
-	public function createChild(): Genome
+	abstract function random(): Genome;
+
+	abstract function fitness(Genome $genome): int;
+
+	public function __construct(
+	    float $mutationProbability = 0.01,
+        float $crossoverProbability = 0.87,
+        array $population = []
+    )
+    {
+        $this->mutationProbability = $mutationProbability;
+        $this->crossoverProbability = $crossoverProbability;
+        $this->population = $population;
+    }
+
+    public function initialize(int $populationSize = 50)
+    {
+        if (!empty($this->population)) {
+            throw new \Exception('Population already initialized!');
+        }
+
+        foreach(range(1, $populationSize) as $i) {
+            $this->population[] = $this->random();
+        }
+    }
+
+	public function createChild(int $sum, int $max): Genome
 	{
 		/**
 		 * @var Genome $parent1
 		 * @var Genome $parent2
 		 */
-		list($parent1, $parent2) = $this->getParents();
+		list($parent1, $parent2) = $this->getParents($sum, $max);
 
-		if ($this->randomFloat() < self::CROSSOVER_PROBABILITY) {
-			$child = $parent1->breedWith($parent2);
-		} else {
-			$child = $parent1;
-		}
-
-		if ($this->randomFloat() < self::MUTATION_PROBABILITY) {
-			$child = $child->mutate();
-		}
-
-		return $child;
+		$child = $this->crossover($parent1, $parent2);
+		return $this->mutate($child);
 	}
 
-	function getParents(): array
+	function getParents(int $sum, int $max): array
 	{
-		$randomParent = function(int $sum, int $max): Genome
+		$randomParent = function() use ($sum, $max): Genome
 		{
 			$val = $this->randomFloat() * $sum;
 
-			for ($i = 0; $i < count($this->population); $i++) {
+			foreach($this->population as $member) {
 				/** @var Genome $member */
-				$member = $this->population[$i];
-				$maxMinusFitness = $max - $member->determineFitness();
+				$maxMinusFitness = $max - $this->fitness($member);
 				if ($val < $maxMinusFitness) {
 					return $member;
 				}
@@ -53,39 +69,45 @@ abstract class Population
 		};
 
 		return [
-			$randomParent($this->sumOfMaxMinusFitness, $this->maxFitness),
-			$randomParent($this->sumOfMaxMinusFitness, $this->maxFitness),
+			$randomParent(),
+			$randomParent(),
 		];
 	}
 
-	public function step()
+	public function step(): Population
 	{
+	    $maxFitness = 0;
+	    $sumOfMaxMinusFitness = 0;
+
 		// Calculate some useful values we need later for selecting random parents.
 		foreach($this->population as $member) {
 			/** @var Genome $member */
-			$this->maxFitness = max($this->maxFitness, $member->determineFitness());
+			$maxFitness = max($maxFitness, $this->fitness($member));
 		}
-		$this->maxFitness += 1.0;
+		$maxFitness += 1.0;
 
 		foreach($this->population as $member) {
 			/** @var Genome $member */
-			$this->sumOfMaxMinusFitness += ($this->maxFitness - $member->determineFitness());
+			$sumOfMaxMinusFitness += ($maxFitness - $this->fitness($member));
 		}
 
 		// Create a new population
 		$newPopulation = [];
-		while(count($newPopulation) < count($this->population)) {
-			$newPopulation[] = $this->createChild();
+		$populationSize = count($this->population);
+
+		// Allow the best child to move on
+        $newPopulation[] = $this->bestGenome();
+
+        // Add other children
+		while(count($newPopulation) < $populationSize) {
+			$newPopulation[] = $this->createChild($sumOfMaxMinusFitness, $maxFitness);
 		}
 
-		$this->population = $newPopulation;
-		$this->maxFitness = 0;
-		$this->sumOfMaxMinusFitness = 0;
-	}
-
-	public function best(): string
-	{
-		return $this->bestGenome()->asString();
+		return new static(
+		    $this->mutationProbability,
+            $this->crossoverProbability,
+            $newPopulation
+        );
 	}
 
 	public function bestGenome(): Genome
@@ -94,17 +116,17 @@ abstract class Population
 		$bestFitness = PHP_INT_MAX;
 		foreach($this->population as $member) {
 			/** @var Genome $member */
-			if ($member->determineFitness() < $bestFitness) {
+            $fitness = $this->fitness($member);
+			if ($fitness < $bestFitness) {
 				$best = $member;
+				$bestFitness = $fitness;
 			}
 		}
 
 		return $best;
 	}
 
-	abstract function __construct(int $members);
-
-	private function randomFloat(): float
+	protected function randomFloat(): float
 	{
 		return random_int(0, PHP_INT_MAX - 1) / PHP_INT_MAX;
 	}

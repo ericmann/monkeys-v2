@@ -6,26 +6,69 @@ use EAMann\Machines\Genome;
 
 class Population extends \EAMann\Machines\Population
 {
-	private $target;
+	public static $target = 'To be or not to be, that is the question!';
 
-	public function __construct(int $members)
-	{
-		$target = 'To be or not to be';
-		$this->initialize($target, $members);
-	}
+	public function crossover(Genome $first, Genome $second): Genome
+    {
+        $crossoverPoint = random_int(0, strlen($first) - 1);
 
-	public function initialize(string $target, int $members = 200)
-	{
-		$this->target = $target;
-		$this->population = [];
+        $newGenome = substr($first, 0, $crossoverPoint) . substr($second, $crossoverPoint);
+        return new Genome($newGenome);
+    }
 
-		foreach(range(0, $members) as $i) {
-			$this->population[] = new Monkey(strlen($target), $this);
+	public function mutate(Genome $genome): Genome
+    {
+        $newGenome = (string) $genome;
+        $upDown = random_int(0, 10) < 5 ? -1 : 1;
+		$index = random_int(0, strlen($newGenome) - 1);
+
+		$newChar = ord($newGenome[$index]) + $upDown;
+
+		if ($newChar === 31 || $newChar === 127) {
+			$newChar = 10;
+		} else if ($newChar === 9) {
+			$newChar = 126;
+		} else if ($newChar === 11) {
+			$newChar = 32;
 		}
-	}
+		$newGenome[$index] = chr($newChar);
 
-	public function getTarget(): string
+		return new Genome($newGenome);
+    }
+
+	public function random(): Genome
+    {
+        $genome = '';
+        for($i = 0; $i < strlen(self::$target); $i++) {
+			$genome .= $this->validChars()[random_int(1, count($this->validChars())) - 1];
+		}
+
+        return new Genome($genome);
+    }
+
+    public function fitness(Genome $genome): int
+    {
+        $genomeStr = (string) $genome;
+        $fitness = 0;
+		foreach(range(0, strlen(self::$target) - 1) as $index) {
+			$fitness += pow(ord($genomeStr[$index]) - ord(self::$target[$index]), 2);
+		}
+
+		return $fitness;
+    }
+
+    private function validChars(): array
 	{
-		return $this->target;
+		static $_validChars;
+
+		if (!$_validChars) {
+			$_validChars[] = chr(10);
+
+			for ($i = 2, $pos = 32; $i < 97; $i++, $pos++) {
+				$_validChars[] = chr($pos);
+			}
+		}
+
+		return $_validChars;
 	}
 }

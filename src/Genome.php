@@ -1,13 +1,27 @@
 <?php
 namespace EAMann\Machines;
 
-abstract class Genome
+class Genome implements \Serializable
 {
-	abstract function breedWith(Genome $parent): Genome;
+    private $genome;
 
-	abstract function mutate(): Genome;
+    public function __construct($genome)
+    {
+        $this->genome = $genome;
+    }
 
-	abstract function determineFitness(): int;
+    public function __toString(): string
+    {
+        return $this->genome;
+    }
 
-	abstract function asString(): string;
+    public function serialize()
+    {
+        return $this->genome;
+    }
+
+    public function unserialize($data)
+    {
+        $this->genome = $data;
+    }
 }
