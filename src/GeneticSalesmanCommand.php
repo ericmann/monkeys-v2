@@ -4,6 +4,7 @@ namespace EAMann\Machines;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use WebSocket\Client;
 
 class GeneticSalesmanCommand extends Command
 {
@@ -23,10 +24,20 @@ class GeneticSalesmanCommand extends Command
         $population->initialize(30);
         $kernel = new Kernel($population);
 
-        $initialDistance = $population->fitness($kernel->bestGenome());
+        $initialBest = $kernel->bestGenome();
+        $initialDistance = $population->fitness($initialBest);
+
+        $client = new Client('ws://localhost:8080');
+        $payload = [
+        	'generation' => 0,
+			'fitness'    => $initialDistance,
+			'best'       => (string) $initialBest
+		];
+        $client->send(json_encode($payload));
 
 		$startTime = time();
-		foreach(range(1, 2500) as $i) {
+		$generations = 2500;
+		foreach(range(1, $generations) as $i) {
 			$kernel = $kernel->next();
 			$best = $kernel->bestGenome();
 
@@ -34,24 +45,44 @@ class GeneticSalesmanCommand extends Command
 				$genPerSec = floor($i/(time() - $startTime + 1));
 				// Print status
 
+				$bestFitness = $population->fitness($best);
+
 				$out = '';
 				$out .= "\nGeneration:   " . $i;
 				$out .="\nGen / sec:    " . $genPerSec;
-				$out .="\nBest Fitness: " . $population->fitness($best);
+				$out .="\nBest Fitness: " . $bestFitness;
 				$out .= "\n\n" . $best;
 
 				$lines = substr_count($out, "\n");
 				$output->write(str_repeat("\x1B[1A\x1B[2K", $lines));
 				$output->write($out);
+
+				$payload = [
+					'generation' => $i,
+					'fitness'    => $bestFitness,
+					'best'       => (string) $best
+				];
+				$client->send(json_encode($payload));
 			}
 		}
 
 		// Print final status
+		$finalBest = $kernel->bestGenome();
+		$finalFitness = $population->fitness($finalBest);
 		$totalTime = (time() - $startTime);
 		$output->write("\n\nSalesman are done!");
 		$output->write(sprintf("\nInit Fitness: %d", $initialDistance));
-		$output->write(sprintf("\nBest Fitness: %d", $population->fitness($kernel->bestGenome())));
+		$output->write(sprintf("\nBest Fitness: %d", $finalFitness));
 		$output->write(sprintf("\nEverything completed in %s seconds.\n", $totalTime));
+
+		$payload = [
+			'generation' => $generations,
+			'fitness'    => $finalFitness,
+			'best'       => (string) $finalBest
+		];
+		$client->send(json_encode($payload));
+
+		$client->close();
 
 		// Done
 		return 0;

@@ -3,7 +3,9 @@
     "description": "Code to back an intro to machine learning in PHP.",
     "type": "project",
     "require": {
-        "symfony/console": "^5.1"
+        "symfony/console": "^5.1",
+        "cboden/ratchet": "^0.4",
+        "textalk/websocket": "1.0.*"
     },
     "license": "MIT",
     "authors": [
@@ -15,7 +17,8 @@
     "minimum-stability": "dev",
     "autoload": {
         "classmap": [
-            "src"
+            "src",
+            "server"
         ]
     }
 }
