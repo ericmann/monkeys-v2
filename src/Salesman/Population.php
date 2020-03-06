@@ -3,33 +3,20 @@
 namespace EAMann\Machines\Salesman;
 
 use EAMann\Machines\Genome;
+use EAMann\Machines\SalesmanTrait;
 
 class Population extends \EAMann\Machines\Population
 {
-    public static $cities = [
-        'A' => [2, 2],
-        'B' => [6, 2],
-        'C' => [16, 2],
-        'D' => [2, 4],
-        'E' => [10, 4],
-        'F' => [20, 4],
-        'G' => [18, 6],
-        'H' => [6, 8],
-        'I' => [12, 8],
-        'J' => [18, 10],
-        'K' => [4, 12],
-        'L' => [10, 12],
-        'M' => [14, 14],
-        'N' => [2, 16],
-        'O' => [10, 16],
-        'P' => [20, 16],
-        'Q' => [8, 18],
-        'R' => [14, 18],
-        'S' => [16, 20],
-        'T' => [18, 20],
-    ];
+    use SalesmanTrait;
 
-    function crossover(Genome $first, Genome $second): Genome
+    public function __construct(float $mutationProbability = 0.01, float $crossoverProbability = 0.87, array $population = [])
+	{
+		parent::__construct($mutationProbability, $crossoverProbability, $population);
+
+		self::loadCities();
+	}
+
+	function crossover(Genome $first, Genome $second): Genome
     {
         $geneA = random_int(0, strlen($first) - 1);
         $geneB = random_int(0, strlen($second) - 1);
@@ -62,7 +49,8 @@ class Population extends \EAMann\Machines\Population
 
     function random(): Genome
     {
-        return new Genome(str_shuffle('ABCDEFGHIJKLMNOPQRST'));
+    	$candidates = join('', array_keys(self::$cities));
+        return new Genome(str_shuffle($candidates));
     }
 
     function fitness(Genome $genome): int

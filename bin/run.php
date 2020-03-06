@@ -10,4 +10,6 @@ use Symfony\Component\Console\Application;
 $application = new Application();
 $application->add(new MonkeyCommand());
 $application->add(new GeneticSalesmanCommand());
+$application->add(new ACOCommand());
+$application->add(new CitiesCommand());
 $application->run();

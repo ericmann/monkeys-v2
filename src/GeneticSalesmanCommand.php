@@ -4,10 +4,11 @@ namespace EAMann\Machines;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use WebSocket\Client;
 
 class GeneticSalesmanCommand extends Command
 {
+    use SocketClient;
+
 	protected static $defaultName = 'genetic:salesman';
 
 	protected function configure()
@@ -27,43 +28,27 @@ class GeneticSalesmanCommand extends Command
         $initialBest = $kernel->bestGenome();
         $initialDistance = $population->fitness($initialBest);
 
-        $client = new Client('ws://localhost:8080');
+        $this->connect();
         $payload = [
         	'generation' => 0,
 			'fitness'    => $initialDistance,
 			'best'       => (string) $initialBest
 		];
-        $client->send(json_encode($payload));
+        $this->send($payload);
 
 		$startTime = time();
 		$generations = 2500;
 		foreach(range(1, $generations) as $i) {
 			$kernel = $kernel->next();
 			$best = $kernel->bestGenome();
+			$bestFitness = $population->fitness($best);
 
-			if ($i % 10 === 0) {
-				$genPerSec = floor($i/(time() - $startTime + 1));
-				// Print status
-
-				$bestFitness = $population->fitness($best);
-
-				$out = '';
-				$out .= "\nGeneration:   " . $i;
-				$out .="\nGen / sec:    " . $genPerSec;
-				$out .="\nBest Fitness: " . $bestFitness;
-				$out .= "\n\n" . $best;
-
-				$lines = substr_count($out, "\n");
-				$output->write(str_repeat("\x1B[1A\x1B[2K", $lines));
-				$output->write($out);
-
-				$payload = [
-					'generation' => $i,
-					'fitness'    => $bestFitness,
-					'best'       => (string) $best
-				];
-				$client->send(json_encode($payload));
-			}
+			$payload = [
+				'generation' => $i,
+				'fitness'    => $bestFitness,
+				'best'       => (string) $best
+			];
+			$this->send($payload);
 		}
 
 		// Print final status
@@ -80,9 +65,9 @@ class GeneticSalesmanCommand extends Command
 			'fitness'    => $finalFitness,
 			'best'       => (string) $finalBest
 		];
-		$client->send(json_encode($payload));
+		$this->send($payload);
 
-		$client->close();
+		$this->close();
 
 		// Done
 		return 0;
